@@ -5,6 +5,9 @@ import (
 	"context"
 	"database/sql/driver"
 	"errors"
+	"fmt"
+	"strings"
+
 	"github.com/sirupsen/logrus"
 	"gorm.io/driver/bigquery/adaptor"
 )
@@ -144,7 +147,8 @@ func (statement bigQueryStatement) Query(args []driver.Value) (driver.Rows, erro
 
 func (statement bigQueryStatement) buildQuery(args []driver.Value) (*bigquery.Query, error) {
 
-	query, err := statement.connection.query(statement.query)
+	queryText := applyReservation(statement.query, statement.connection.config.reservation)
+	query, err := statement.connection.query(queryText)
 	if err != nil {
 		return nil, err
 	}
@@ -155,6 +159,19 @@ func (statement bigQueryStatement) buildQuery(args []driver.Value) (*bigquery.Qu
 	}
 
 	return query, err
+}
+
+func applyReservation(query, reservation string) string {
+	if reservation == "" {
+		return query
+	}
+	trimmed := strings.TrimSpace(query)
+	upper := strings.ToUpper(trimmed)
+	if strings.HasPrefix(upper, "SET @@RESERVATION=") || strings.HasPrefix(upper, "SET @@RESERVATION ") {
+		return query
+	}
+	escaped := strings.ReplaceAll(reservation, "'", "''")
+	return fmt.Sprintf("SET @@reservation='%s';\n%s", escaped, query)
 }
 
 func (statement bigQueryStatement) buildParameters(args []driver.Value) ([]bigquery.QueryParameter, error) {
