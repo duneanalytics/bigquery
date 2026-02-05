@@ -166,7 +166,8 @@ func applyReservation(query, reservation string) string {
 		return query
 	}
 	trimmed := strings.TrimSpace(query)
-	if strings.HasPrefix(strings.ToUpper(trimmed), "SET @@RESERVATION") {
+	upper := strings.ToUpper(trimmed)
+	if strings.HasPrefix(upper, "SET @@RESERVATION=") || strings.HasPrefix(upper, "SET @@RESERVATION ") {
 		return query
 	}
 	escaped := strings.ReplaceAll(reservation, "'", "''")
